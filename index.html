@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Anel de Cores</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        font-family: sans-serif;
+        background: #f0f0f0;
+      }
+
+      .container {
+        position: relative;
+        width: 600px; /* Largura do anel */
+        height: 600px; /* Altura do anel */
+      }
+
+      /* Este elemento será o anel de cores usando conic-gradient */
+      .color-ring {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        /* Cor de fundo inicial para evitar “flicker” enquanto o JS carrega */
+        background: #ccc;
+        /* Criamos a ilusão de anel com um pseudo-elemento "furo" no meio */
+        overflow: hidden; /* Para o pseudo-elemento não extravasar */
+      }
+
+      /* O "furo" do anel (um círculo branco dentro, simulando a espessura do anel) */
+      .color-ring::before {
+        content: '';
+        position: absolute;
+        top: 50px; /* Ajuste para definir a espessura do anel */
+        left: 50px;
+        width: calc(100% - 100px);
+        height: calc(100% - 100px);
+        background: #fff; /* Cor interna do anel (branco) */
+        border-radius: 50%;
+        z-index: 1; /* Fica acima do gradiente */
+      }
+
+      /* Cada rótulo de cor (texto em preto e branco) */
+      .color-label {
+        position: absolute;
+        width: 2.5rem; /* Largura do "bloco" que conterá o texto */
+        text-align: center;
+        transform-origin: 0 0; /* Vamos posicionar via transform rotate/translate */
+        /* Damos um "offset" visual para centralizar texto em relação ao ponto de ancoragem */
+        margin-left: 0rem; /* -metade da largura para centralizar */
+        top: 50%;
+        left: 50%;
+        z-index: 2; /* Acima do anel */
+        pointer-events: none; /* Para não “pegar” clique, caso seja desejado */
+      }
+
+      .color-label .hex-black {
+        color: #000;
+        font-size: 0.5rem;
+        line-height: 1.2;
+        text-shadow: 0 0 2px #fff; /* Pequeno contorno para ficar visível */
+      }
+
+      .color-label .hex-white {
+        color: #fff;
+        font-size: 0.5rem;
+        line-height: 1.2;
+        text-shadow: 0 0 2px #000; /* Pequeno contorno para ficar visível */
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="color-ring" id="colorRing"></div>
+      <!-- As labels serão criadas dinamicamente via JavaScript -->
+    </div>
+
+    <script>
+      // Lista de cores em JSON (como fornecido).
+      // Se preferir, pode carregar externamente ou adaptar.
+      const jsonCores = {
+        cores: [
+          '#FFF3E3',
+          '#D9BCA3',
+          '#A65C32',
+          '#73320D',
+          '#401F18',
+          '#FDF3F4',
+          '#F5B8A5',
+          '#A14B30',
+          '#E3B1AA',
+          '#D97E8E',
+          '#0D0D0D',
+          '#58595B',
+          '#E6E6E6',
+          '#EC6585',
+          '#FE3BA7',
+          '#FE6CBD',
+          '#12B6B6',
+          '#F294C8',
+          '#D97E8E',
+          '#EC6585',
+          '#FE3BA7',
+          '#FE6CBD',
+          '#F294C8',
+          '#fce8f3',
+          '#44454a',
+          '#472927',
+          '#472927',
+          '#fafafa',
+          '#12b6b6',
+          '#fe3ba7',
+          '#0d0d0d',
+          '#a7b9b9',
+          '#e8cfca',
+          '#a7b9b9',
+          '#ffffff',
+          '#a7b9b9',
+          '#f7d1e6',
+          '#F2D3CE',
+          '#35b69f',
+          '#fe71c6',
+          '#ecf0f1',
+          '#ffe457',
+          '#8e8b63',
+          '#d6d4ad',
+          '#eddada',
+          '#cb8587',
+          '#bacb86',
+          '#eddada',
+          '#949983',
+          '#d7adae',
+          '#e4cbce',
+          '#ececea',
+          '#e6b3b2',
+          '#f1d3d1',
+          '#e3d7bf',
+          '#f2d1e4'
+        ]
+      };
+
+      // Extrai apenas o array de cores
+      const cores = jsonCores.cores;
+      const total = cores.length;
+
+      // Seleciona o elemento do anel
+      const colorRing = document.getElementById('colorRing');
+
+      // Monta a string do conic-gradient dinamicamente
+      // Cada cor ocupará um segmento do ângulo total (360 graus / nCores)
+      let angleStep = 360 / total;
+      let gradientParts = [];
+
+      // Vamos acumulando cada cor com intervalo de ângulo
+      for (let i = 0; i < total; i++) {
+        let startAngle = i * angleStep;
+        let endAngle = (i + 1) * angleStep;
+        gradientParts.push(`${cores[i]} ${startAngle}deg ${endAngle}deg`);
+      }
+
+      // Cria a string final para o conic-gradient
+      let gradientString = `conic-gradient(${gradientParts.join(', ')})`;
+
+      // Define o background do anel (sem o "furo" ainda)
+      colorRing.style.background = gradientString;
+
+      // Agora criamos os rótulos de cada cor,
+      // posicionados em torno do centro do círculo.
+      // Raio efetivo onde as labels irão se posicionar
+      // (mais ou menos no meio da “faixa” do anel).
+      const radius = 250; // Ajuste conforme desejar
+
+      const container = document.querySelector('.container');
+
+      for (let i = 0; i < total; i++) {
+        const labelDiv = document.createElement('div');
+        labelDiv.className = 'color-label';
+
+        // Duas linhas: uma com texto em preto, outra em branco
+        const blackSpan = document.createElement('div');
+        blackSpan.className = 'hex-black';
+        blackSpan.textContent = cores[i]; // Exibindo o hex
+
+        const whiteSpan = document.createElement('div');
+        whiteSpan.className = 'hex-white';
+        whiteSpan.textContent = cores[i]; // Mesmo hex
+
+        labelDiv.appendChild(blackSpan);
+        labelDiv.appendChild(whiteSpan);
+
+        // Ângulo central do segmento (usamos a metade do ânguloStep)
+        let midAngle = (i + 0.5) * angleStep;
+        // Convertemos para radianos
+        let rad = midAngle * (Math.PI / 180);
+
+        // Calcula posição (x, y) relativa ao centro
+        // centerX/Y = 50% da largura da .container
+        // x = cos(rad)*radius, y = sin(rad)*radius
+        // Usamos transform rotate() + translate() ou
+        // definimos left/top diretamente. Abaixo, vou usar rotate/translate
+        // para que o label "aponte" para fora.
+
+        // Precisamos rotacionar a label de modo que seu canto superior esquerdo
+        // fique no centro (top/left = 50% 50%), e então a movemos para fora.
+        // Entretanto, para ficar organizado, vamos fazer:
+        let rotation = midAngle; // usado no rotate()
+
+        // Posiciona e rotaciona cada label
+        // labelDiv.style.transform = `rotate(${rotation}deg) translate(${radius}px) rotate(-${rotation}deg)`; // # todos na horizontal
+        // Rotaciona o rótulo como um “raio” e o empurra para longe do centro
+        labelDiv.style.transform = `rotate(${
+          midAngle - 89
+        }deg) translateX(${radius}px)`;
+
+        // Se estiver no lado esquerdo (90° a 270°), invertemos em 180°
+        // para o texto não ficar "cabeça para baixo".
+        // Acrescentar rotação de 180° ao final:
+        labelDiv.style.transform += ' rotate(180deg)';
+        // if (midAngle > 180 && midAngle < 360) {
+        // }
+
+        container.appendChild(labelDiv);
+      }
+    </script>
+  </body>
+</html>
